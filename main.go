@@ -17,10 +17,18 @@ func main() {
 		Handler: corsMux,
 	}
 
-	mux.Handle("/", http.FileServer(http.Dir(".")))
+	mux.HandleFunc("/healthz", healthzHandler)
+
+	mux.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.Dir("."))))
 
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(server.ListenAndServe())
+}
+
+func healthzHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
 }
 
 func middlewareCors(next http.Handler) http.Handler {
