@@ -19,18 +19,18 @@ func main() {
 
 	mux.HandleFunc("/healthz", healthzHandler)
 
-	mux.Handle("/app/", middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir("app")))))
+	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir("app")))))
 
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(server.ListenAndServe())
 }
 
-type apiConfig struct {
+type apiCfg struct {
 	fileserverHits int
 }
 
-func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
-	cfg.fileserverHits += 1
+func (cfg *apiCfg) middlewareMetricsInc(next htstp.Handler) http.Handler {
+.
 }
 
 func healthzHandler(w http.ResponseWriter, r *http.Request) {
