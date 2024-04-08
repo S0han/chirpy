@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"fmt"
 )
 
 func main() {
@@ -19,7 +20,17 @@ func main() {
 
 	mux.HandleFunc("/healthz", healthzHandler)
 
-	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir("app")))))
+	handleState :=  apiCfg{}
+
+	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		handleState.processedRequests(w, r)
+	})
+
+	mux.HandleFunc("/reset", func(w http.ResponseWriter, r*http.Request) {
+		handleState.resetHits(w, r)
+	})
+
+	mux.Handle("/app/", handleState.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir("app")))))
 
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(server.ListenAndServe())
@@ -29,8 +40,22 @@ type apiCfg struct {
 	fileserverHits int
 }
 
-func (cfg *apiCfg) middlewareMetricsInc(next htstp.Handler) http.Handler {
-.
+func (cfg *apiCfg) middlewareMetricsInc(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.fileserverHits++
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (cfg *apiCfg) processedRequests(w http.ResponseWriter, r *http.Request) {
+	hits := fmt.Sprintf("Hits: %d", cfg.fileserverHits)
+	w.Write([]byte(hits))
+}
+
+func (cfg *apiCfg) resetHits(w http.ResponseWriter, r *http.Request) {
+	cfg.fileserverHits = 0
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Hits reset to 0"))
 }
 
 func healthzHandler(w http.ResponseWriter, r *http.Request) {
