@@ -49,6 +49,10 @@ func (cfg *apiCfg) middlewareMetricsInc(next http.Handler) http.Handler {
 }
 
 func (cfg *apiCfg) processedRequests(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Only GET is allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	currentHits := atomic.LoadInt64(&cfg.fileserverHits)
 	hits := fmt.Sprintf(`
 	<html>
