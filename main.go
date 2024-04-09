@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"fmt"
+	"sync/atomic"
 )
 
 func main() {
@@ -18,15 +19,15 @@ func main() {
 		Handler: corsMux,
 	}
 
-	mux.HandleFunc("/healthz", healthzHandler)
+	mux.HandleFunc("/api/healthz", healthzHandler)
 
 	handleState :=  apiCfg{}
 
-	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/admin/metrics", func(w http.ResponseWriter, r *http.Request) {
 		handleState.processedRequests(w, r)
 	})
 
-	mux.HandleFunc("/reset", func(w http.ResponseWriter, r*http.Request) {
+	mux.HandleFunc("/api/reset", func(w http.ResponseWriter, r*http.Request) {
 		handleState.resetHits(w, r)
 	})
 
@@ -37,23 +38,34 @@ func main() {
 }
 
 type apiCfg struct {
-	fileserverHits int
+	fileserverHits int64
 }
 
 func (cfg *apiCfg) middlewareMetricsInc(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.fileserverHits++
+		atomic.AddInt64(&cfg.fileserverHits, 1)
 		next.ServeHTTP(w, r)
 	})
 }
 
 func (cfg *apiCfg) processedRequests(w http.ResponseWriter, r *http.Request) {
-	hits := fmt.Sprintf("Hits: %d", cfg.fileserverHits)
+	currentHits := atomic.LoadInt64(&cfg.fileserverHits)
+	hits := fmt.Sprintf(`
+	<html>
+	<body>
+		<h1>Welcome, Chirpy Admin</h1>
+		<p>Chirpy has been visited %d times!</p>
+	</body>
+	
+	</html>
+	`, currentHits)
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(hits))
 }
 
 func (cfg *apiCfg) resetHits(w http.ResponseWriter, r *http.Request) {
-	cfg.fileserverHits = 0
+	atomic.StoreInt64(&cfg.fileserverHits, 0)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Hits reset to 0"))
 }
