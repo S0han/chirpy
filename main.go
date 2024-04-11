@@ -27,8 +27,12 @@ func main() {
 		handleState.processedRequests(w, r)
 	})
 
-	mux.HandleFunc("/api/reset", func(w http.ResponseWriter, r*http.Request) {
+	mux.HandleFunc("/api/reset", func(w http.ResponseWriter, r *http.Request) {
 		handleState.resetHits(w, r)
+	})
+
+	mux.HandleFunc("/api/validate_chirp" func(w http.ResponseWriter, r *http.Request) {
+		//code to be added
 	})
 
 	mux.Handle("/app/", handleState.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir("app")))))
