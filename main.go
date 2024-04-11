@@ -31,14 +31,18 @@ func main() {
 		handleState.resetHits(w, r)
 	})
 
-	mux.HandleFunc("/api/validate_chirp" func(w http.ResponseWriter, r *http.Request) {
-		//code to be added
-	})
+	mux.HandleFunc("/api/validate_chirp", validChirpHandler)
 
 	mux.Handle("/app/", handleState.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir("app")))))
 
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(server.ListenAndServe())
+}
+
+func validChirpHandler(w http.ResponseWriter, r *http.Request) {	
+	type post struct {
+		Body stirng `json:"body"`
+	}
 }
 
 type apiCfg struct {
