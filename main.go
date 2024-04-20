@@ -31,7 +31,7 @@ func main() {
 		handleState.resetHits(w, r)
 	})
 
-	mux.HandleFunc("/api/validate_chirp", validChirpHandler)
+	mux.HandleFunc("POST /api/validate_chirp", validChirpHandler)
 
 	mux.Handle("/app/", handleState.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir("app")))))
 
@@ -40,9 +40,41 @@ func main() {
 }
 
 func validChirpHandler(w http.ResponseWriter, r *http.Request) {	
-	type post struct {
-		Body stirng `json:"body"`
+	
+	//decode json
+	type parameters struct {
+		Body string `json:"body"`
+		Error string `json:"error"`
 	}
+
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		log.Printf("Something went wrong")
+		w.WriteHeader(500)
+		return
+	}
+
+	//encode json
+	type returnVals struct {
+		CreatedAt time.Time `json:"created_at"`
+		ID int `json:"id"`
+	}
+	respBody := returnVals{
+		CreatedAt: time.Now(),
+		ID: 123,
+	}
+	dat, err := json.Marshal(respBody)
+	if err !=  nil {
+		if len(dat) > 140 {
+			log.Printf("Chirp is too long")
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	log.Printf("true")
+	w.writeHeader(200)
+	w.Write(dat)
 }
 
 type apiCfg struct {
