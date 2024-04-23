@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"encoding/json"
 	"net/http"
 	"fmt"
 	"sync/atomic"
@@ -52,6 +53,8 @@ func validChirpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
 	params := parameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
@@ -61,24 +64,8 @@ func validChirpHandler(w http.ResponseWriter, r *http.Request) {
 
 	if len(params.Body) > 140 {
 		w.WriteHeader(400)
-		w.Write({"error": "Chirp is too long"})
 	}
 
-	//encode json
-	type returnVals struct {
-		
-	}
-	respBody := returnVals{
-		
-	}
-	dat, err := json.Marshal(respBody)
-	if err !=  nil {
-		log.Printf("Something went wrong")
-	}
-	w.Header().Set("Content-Type", "application/json")
-	log.Printf("true")
-	w.WriteHeader(http.StatusOK)
-	w.Write(dat)
 }
 
 type apiCfg struct {
