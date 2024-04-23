@@ -53,18 +53,21 @@ func validChirpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	defer r.Body.Close()
-
-	params := parameters{}
-	err := decoder.Decode(&params)
+	p := parameters{}
+	err := decoder.Decode(&p)
 	if err != nil {
+		log.Printf("Something went wrong")
 		w.WriteHeader(400)
 		return
 	}
 
-	if len(params.Body) > 140 {
+	if len(p.Body) > 140 {
+		log.Printf("Chirp is too long")
 		w.WriteHeader(400)
+		return
 	}
+
+
 
 }
 
