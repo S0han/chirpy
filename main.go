@@ -61,14 +61,21 @@ func validChirpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(p.Body) > 140 {
-		log.Printf("Chirp is too long")
-		w.WriteHeader(400)
-		return
+	dat, err := json.Marshal(decoder)
+	if err != nil {
+
+		if len(p.Body) > 140 {
+			log.Printf("Chirp is too long")
+			w.WriteHeader(400)
+			return
+		} else {
+			log.Printf("Something went wrong")
+		}
 	}
 
-
-
+	w.Header().Set("Content-Type", "applicaiton/json")
+	w.WriteHeader(200)
+	w.Write(dat)
 }
 
 type apiCfg struct {
