@@ -56,26 +56,28 @@ func validChirpHandler(w http.ResponseWriter, r *http.Request) {
 	p := parameters{}
 	err := decoder.Decode(&p)
 	if err != nil {
-		log.Printf("Something went wrong")
+		http.Error(w, `{"error": "Something went wrong"}`, http.StatusMethodNotAllowed)
 		w.WriteHeader(400)
 		return
 	}
 
-	dat, err := json.Marshal(decoder)
-	if err != nil {
-
-		if len(p.Body) > 140 {
-			log.Printf("Chirp is too long")
-			w.WriteHeader(400)
-			return
-		} else {
-			log.Printf("Something went wrong")
-		}
+	if len(p.Body) > 140 {
+		http.Error(w, `{"error": "Chirp is too long"}`, http.StatusBadRequest)
+		w.WriteHeader(400)
+		return
 	}
 
-	w.Header().Set("Content-Type", "applicaiton/json")
+	response := map[string]bool {"valid": true}
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, `{"error": "Something went wrong"}`, http.StatusBadRequest)
+		w.WriteHeader(400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
-	w.Write(dat)
+	w.Write(responseJSON)
 }
 
 type apiCfg struct {
