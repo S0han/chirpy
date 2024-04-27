@@ -81,6 +81,28 @@ func validChirpHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(responseJSON)
 }
 
+func removeProfanity(chirp string) string {
+	split := strings.Split(chirp, " ")
+
+	badWords := map[string]bool{
+		"kerfuffle": true,
+		"sharbert": true,
+		"fornax": true,
+	}
+
+	for i, word := range split {
+		
+		lowerWord := strings.ToLower(word)
+
+		if badWords[lowerWord] {
+			split[i] = "****"
+		} 
+	}
+
+	filtered := strings.Join(split, " ")
+	return filtered
+}
+
 type apiCfg struct {
 	fileserverHits int64
 }
