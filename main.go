@@ -57,28 +57,28 @@ func validChirpHandler(w http.ResponseWriter, r *http.Request) {
 	p := parameters{}
 	err := decoder.Decode(&p)
 	if err != nil {
-		http.Error(w, `{"error": "Something went wrong"}`, http.StatusMethodNotAllowed)
-		w.WriteHeader(400)
-		return
+		respondWithError(w, 400, `{"error": "Something went wrong"}`)
 	}
 
 	if len(p.Body) > 140 {
-		http.Error(w, `{"error": "Chirp is too long"}`, http.StatusBadRequest)
-		w.WriteHeader(400)
-		return
+		respondWithError(w, 400, `{"error": "Chirp is too long"}`)
 	}
 
 	response := map[string]bool {"valid": true}
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
-		http.Error(w, `{"error": "Something went wrong"}`, http.StatusBadRequest)
-		w.WriteHeader(400)
-		return
+		respondWithError(w, 400, `{"error": "Something went wrong"}`)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 	w.Write(responseJSON)
+}
+
+func respondWithError(w http.ResponseWriter, code int, msg string) {
+	http.Error(w, msg, http.StatusBadRequest)
+	w.WriteHeader(code)
+	return
 }
 
 func removeProfanity(chirp string) string {
