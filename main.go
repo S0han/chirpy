@@ -64,7 +64,9 @@ func validChirpHandler(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, 400, `{"error": "Chirp is too long"}`)
 	}
 
-	response := map[string]bool {"valid": true}
+	cleaned_body := removeProfanity(p.Body)
+
+	response := map[string]string {"cleaned_body": cleaned_body}
 	
 	respondWithJSON(w, 200, response)
 }
