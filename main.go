@@ -65,7 +65,12 @@ func validChirpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]bool {"valid": true}
-	responseJSON, err := json.Marshal(response)
+	
+	respondWithJSON(w, 200, response)
+}
+
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	responseJSON, err := json.Marshal(payload)
 	if err != nil {
 		respondWithError(w, 400, `{"error": "Something went wrong"}`)
 	}
