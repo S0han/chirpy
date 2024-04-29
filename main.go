@@ -33,12 +33,16 @@ func main() {
 		handleState.resetHits(w, r)
 	})
 
-	mux.HandleFunc("/api/validate_chirp", validChirpHandler)
+	mux.HandleFunc("/api/chirps", chirpHandler)
 
 	mux.Handle("/app/", handleState.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir("app")))))
 
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(server.ListenAndServe())
+}
+
+func chirpHandler(w http.ResponseWriter, r *http.Request) {
+	
 }
 
 func validChirpHandler(w http.ResponseWriter, r *http.Request) {	
