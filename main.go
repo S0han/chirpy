@@ -71,7 +71,7 @@ func validChirpHandler(w http.ResponseWriter, r *http.Request) {
 
 	cleaned_body := removeProfanity(p.Body)
 
-	//change this to body to statisfy the new requirements
+	//change this to body form cleaned_body to statisfy the new requirements
 	response := map[string]string {"body": cleaned_body}
 	
 	respondWithJSON(w, 200, response)
