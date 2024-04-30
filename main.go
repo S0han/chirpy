@@ -42,18 +42,19 @@ func main() {
 }
 
 func chirpHandler(w http.ResponseWriter, r *http.Request) {
-	
+	//check if the chirp is valid before proceeding
+	validChirp, err := validChirpHandler(w, r)
+	if err != nil {
+		respondWithError(w, 400, `{"error": "Something went wrong"}`)
+	}
+
 }
 
 func validChirpHandler(w http.ResponseWriter, r *http.Request) {	
-	
-	if r.Method != http.MethodPost {
-		http.Error(w, "Only POST is allowed", http.StatusMethodNotAllowed)
-		return
-	}
 
 	//decode json
 	type parameters struct {
+		Id int  `json:"id"`
 		Body string `json:"body"`
 	}
 
@@ -70,7 +71,8 @@ func validChirpHandler(w http.ResponseWriter, r *http.Request) {
 
 	cleaned_body := removeProfanity(p.Body)
 
-	response := map[string]string {"cleaned_body": cleaned_body}
+	//change this to body to statisfy the new requirements
+	response := map[string]string {"body": cleaned_body}
 	
 	respondWithJSON(w, 200, response)
 }
