@@ -42,11 +42,24 @@ func main() {
 }
 
 func chirpHandler(w http.ResponseWriter, r *http.Request) {
+
+	type DB struct {
+		path string 
+		mux *sync.RWMutex
+	}
+
+	type DBStructure struct {
+		Chirps map[int]Chirp `json:"chirps"`
+	}
+
 	//check if the chirp is valid before proceeding
 	validChirp, err := validChirpHandler(w, r)
 	if err != nil {
 		respondWithError(w, 400, `{"error": "Something went wrong"}`)
+		return
 	}
+
+
 
 }
 
@@ -63,15 +76,17 @@ func validChirpHandler(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&p)
 	if err != nil {
 		respondWithError(w, 400, `{"error": "Something went wrong"}`)
+		return
 	}
 
 	if len(p.Body) > 140 {
 		respondWithError(w, 400, `{"error": "Chirp is too long"}`)
+		return
 	}
 
 	cleaned_body := removeProfanity(p.Body)
 
-	//change this to body form cleaned_body to statisfy the new requirements
+	//change this to body form cleaned_body to satisfy the new requirements
 	response := map[string]string {"body": cleaned_body}
 	
 	respondWithJSON(w, 200, response)
@@ -81,6 +96,7 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	responseJSON, err := json.Marshal(payload)
 	if err != nil {
 		respondWithError(w, 400, `{"error": "Something went wrong"}`)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
