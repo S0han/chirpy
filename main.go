@@ -43,15 +43,6 @@ func main() {
 
 func chirpHandler(w http.ResponseWriter, r *http.Request) {
 
-	type DB struct {
-		path string 
-		mux *sync.RWMutex
-	}
-
-	type DBStructure struct {
-		Chirps map[int]Chirp `json:"chirps"`
-	}
-
 	//check if the chirp is valid before proceeding
 	validChirp, err := validChirpHandler(w, r)
 	if err != nil {
@@ -60,19 +51,49 @@ func chirpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 
+}
 
+type Chirp struct {
+	Id int  `json:"id"`
+	Body string `json:"body"`
+}
+
+type DB struct {
+	path string 
+	mux *sync.RWMutex
+}
+
+type DBStructure struct {
+	Chirps map[int]Chirp `json:"chirps"`
+}
+
+func NewDB(path string) (*DB, error) {
+	return nil,nil
+}
+
+func (db *DB) CreateChirp(body string) (Chirp, error) {
+	return Chirp, nil
+
+func (db *DB) GetChirps() ([]Chirp, error) {
+	return []Chirp, nil
+}
+
+func (db *DB) ensureDB() error {
+	return nil
+}
+
+func (db *DB) loadDB() (DBStructure, error) {
+	return DBStructure, nil
+}
+
+func (db *DB) writeDB(dbStructure DBStructure) error {
+	return nil
 }
 
 func validChirpHandler(w http.ResponseWriter, r *http.Request) {	
 
-	//decode json
-	type parameters struct {
-		Id int  `json:"id"`
-		Body string `json:"body"`
-	}
-
 	decoder := json.NewDecoder(r.Body)
-	p := parameters{}
+	p := Chirp{}
 	err := decoder.Decode(&p)
 	if err != nil {
 		respondWithError(w, 400, `{"error": "Something went wrong"}`)
@@ -100,7 +121,7 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
+	w.WriteHeader(code)
 	w.Write(responseJSON)
 }
 
