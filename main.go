@@ -73,6 +73,7 @@ func NewDB(path string) (*DB, error) {
 
 func (db *DB) CreateChirp(body string) (Chirp, error) {
 	return Chirp, nil
+}
 
 func (db *DB) GetChirps() ([]Chirp, error) {
 	return []Chirp, nil
