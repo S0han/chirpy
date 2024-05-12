@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"log"
 	"encoding/json"
 	"net/http"
@@ -72,7 +73,47 @@ func NewDB(path string) (*DB, error) {
 }
 
 func (db *DB) CreateChirp(body string) (Chirp, error) {
-	return Chirp, nil
+	
+	data, err := os.ReadFile(db.path)
+	if err != nil {
+		return Chirp{}, err
+	}
+
+	var chirpHolder = new(DBStructure)
+
+	if err := json.Unmarshal(data, &chirpHolder); err != nil {
+		return Chirp{}, err
+	}
+
+	maxVal := 0
+
+	for _, val := range(chirpHolder.Chirps) {
+
+		if val.Id > maxVal {
+			maxVal = val.Id
+		}
+	}
+
+	maxVal++
+
+	newChirp := Chirp {
+		Id: maxVal,
+		Body: body,
+	}
+
+	chirpHolder.Chirps[maxVal] = newChirp
+
+	newMap, err := json.Marshal(chirpHolder)
+	if err != nil {
+		return Chirp{}, err
+	}
+
+	err = os.WriteFile(db.path, newMap, os.ModePerm)
+	if err != nil {
+		return Chirp{}, err
+	}
+
+	return newChirp, err
 }
 
 func (db *DB) GetChirps() ([]Chirp, error) {
