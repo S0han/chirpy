@@ -117,10 +117,39 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 }
 
 func (db *DB) GetChirps() ([]Chirp, error) {
-	return []Chirp, nil
+	data, err := os.ReadFile(db.path)
+	if err != nil {
+		return []Chirp{}, err
+	}
+
+	var chirpHolder = new(DBStructure)
+	chirpSlice := []Chirp{}
+
+	if err := json.Unmarshal(data, &chirpHolder); err != nil {
+		return []Chirp{}, err
+	}
+
+	for _, val := range(chirpHolder.Chirps) {
+		chirpSlice = append(chirpSlice, val)
+	}
+
+	return chirpSlice, err
 }
 
 func (db *DB) ensureDB() error {
+
+	if _, err := os.Stat(db.path); err != nil {
+		if os.IsNotExist(err) {
+			file, createErr := os.Create(db.path)
+			if createErr != nil {
+				return createErr
+			}
+			file.Close()
+		} else {
+			return err
+		}
+	}
+
 	return nil
 }
 
