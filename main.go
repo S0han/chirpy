@@ -154,7 +154,19 @@ func (db *DB) ensureDB() error {
 }
 
 func (db *DB) loadDB() (DBStructure, error) {
-	return DBStructure, nil
+
+	data, err := os.ReadFile(db.path)
+	if err != nil {
+		return DBStructure{}, err
+	}
+
+	var loadData = new(DBStructure)
+
+	if err := json.Unmarshal(data, &loadData); err != nil {
+		return DBStructure{}, err
+	}
+
+	return *loadData, nil
 }
 
 func (db *DB) writeDB(dbStructure DBStructure) error {
