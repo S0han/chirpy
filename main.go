@@ -170,6 +170,17 @@ func (db *DB) loadDB() (DBStructure, error) {
 }
 
 func (db *DB) writeDB(dbStructure DBStructure) error {
+
+	data, err := json.Marshal(dbStructure)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(db.path, data, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
