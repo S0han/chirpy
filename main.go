@@ -44,12 +44,30 @@ func main() {
 
 func chirpHandler(w http.ResponseWriter, r *http.Request) {
 
+	method := r.Method
+	switch method {
+		case http.MethodGet:
+			allChirps, err := db.GetChirps()
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, `{"error": "Failed to get chirps"}`)
+            	return
+			}
+			respondWithJSON(w, http.StatusOK, allChirps)
+		case http.MethodPost:
+			return
+		default:
+			respondWithError(w, http.StatusMethodNotAllowed, `{"error": "Method not allowed"}`)
+			return
+	}
+
 	//check if the chirp is valid before proceeding
 	validChirp, err := validChirpHandler(w, r)
 	if err != nil {
 		respondWithError(w, 400, `{"error": "Something went wrong"}`)
 		return
 	}
+
+
 
 
 }
@@ -184,19 +202,19 @@ func (db *DB) writeDB(dbStructure DBStructure) error {
 	return nil
 }
 
-func validChirpHandler(w http.ResponseWriter, r *http.Request) {	
+func validChirpHandler(w http.ResponseWriter, r *http.Request) bool {	
 
 	decoder := json.NewDecoder(r.Body)
 	p := Chirp{}
 	err := decoder.Decode(&p)
 	if err != nil {
 		respondWithError(w, 400, `{"error": "Something went wrong"}`)
-		return
+		return false
 	}
 
 	if len(p.Body) > 140 {
 		respondWithError(w, 400, `{"error": "Chirp is too long"}`)
-		return
+		return false
 	}
 
 	cleaned_body := removeProfanity(p.Body)
@@ -205,6 +223,8 @@ func validChirpHandler(w http.ResponseWriter, r *http.Request) {
 	response := map[string]string {"body": cleaned_body}
 	
 	respondWithJSON(w, 200, response)
+
+	return true
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
