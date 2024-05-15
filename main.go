@@ -44,31 +44,29 @@ func main() {
 
 func chirpHandler(w http.ResponseWriter, r *http.Request) {
 
+
+
 	method := r.Method
 	switch method {
 		case http.MethodGet:
 			allChirps, err := db.GetChirps()
-			if err != nil {
+			if err != nil || !isValid {
 				respondWithError(w, http.StatusInternalServerError, `{"error": "Failed to get chirps"}`)
-            	return
 			}
 			respondWithJSON(w, http.StatusOK, allChirps)
 		case http.MethodPost:
-			return
+			data, err := validChirpHandler(r)
+			if err != nil {
+				respondWithError(w, 400, `{"error": "Something went wrong"}`)
+			}
+			chirp, err := CreateChirp(data.body)
+			if err != nil {
+				respondWithError(w, 400, `{"error": "Something went wrong"}`)
+			}
+			respondWithJSON(w, http.StatusOK, chirp)
 		default:
 			respondWithError(w, http.StatusMethodNotAllowed, `{"error": "Method not allowed"}`)
-			return
 	}
-
-	//check if the chirp is valid before proceeding
-	validChirp, err := validChirpHandler(w, r)
-	if err != nil {
-		respondWithError(w, 400, `{"error": "Something went wrong"}`)
-		return
-	}
-
-
-
 
 }
 
@@ -87,7 +85,18 @@ type DBStructure struct {
 }
 
 func NewDB(path string) (*DB, error) {
-	return nil,nil
+	
+	_, err := ensureDB(path)
+	if err != nil {
+		return nil, err
+	}
+
+	db := &DB{
+		path: path,
+		mux: &sync.RWMutex{},
+	}
+
+	return db, nil
 }
 
 func (db *DB) CreateChirp(body string) (Chirp, error) {
@@ -202,29 +211,25 @@ func (db *DB) writeDB(dbStructure DBStructure) error {
 	return nil
 }
 
-func validChirpHandler(w http.ResponseWriter, r *http.Request) bool {	
+func validChirpHandler(r *http.Request) (bool, error) {	
 
 	decoder := json.NewDecoder(r.Body)
 	p := Chirp{}
 	err := decoder.Decode(&p)
 	if err != nil {
-		respondWithError(w, 400, `{"error": "Something went wrong"}`)
-		return false
+		return false, err
 	}
 
 	if len(p.Body) > 140 {
-		respondWithError(w, 400, `{"error": "Chirp is too long"}`)
-		return false
+		return false, fmt.Errorf("chirp is too long")
 	}
 
 	cleaned_body := removeProfanity(p.Body)
 
 	//change this to body form cleaned_body to satisfy the new requirements
 	response := map[string]string {"body": cleaned_body}
-	
-	respondWithJSON(w, 200, response)
 
-	return true
+	return true, nil
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
