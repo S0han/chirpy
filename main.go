@@ -44,26 +44,27 @@ func main() {
 
 func chirpHandler(w http.ResponseWriter, r *http.Request) {
 
-
-
 	method := r.Method
 	switch method {
 		case http.MethodGet:
 			allChirps, err := db.GetChirps()
-			if err != nil || !isValid {
+			if err != nil {
 				respondWithError(w, http.StatusInternalServerError, `{"error": "Failed to get chirps"}`)
+				return
 			}
 			respondWithJSON(w, http.StatusOK, allChirps)
 		case http.MethodPost:
 			data, err := validChirpHandler(r)
 			if err != nil {
 				respondWithError(w, 400, `{"error": "Something went wrong"}`)
+				return
 			}
 			chirp, err := CreateChirp(data.body)
 			if err != nil {
 				respondWithError(w, 400, `{"error": "Something went wrong"}`)
+				return
 			}
-			respondWithJSON(w, http.StatusOK, chirp)
+			respondWithJSON(w, http.StatusCreated, chirp)
 		default:
 			respondWithError(w, http.StatusMethodNotAllowed, `{"error": "Method not allowed"}`)
 	}
@@ -85,6 +86,10 @@ type DBStructure struct {
 }
 
 func NewDB(path string) (*DB, error) {
+
+	if ensureDB() != nil {
+		return nil, nil
+	}
 	
 	_, err := ensureDB(path)
 	if err != nil {
@@ -144,6 +149,7 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 }
 
 func (db *DB) GetChirps() ([]Chirp, error) {
+
 	data, err := os.ReadFile(db.path)
 	if err != nil {
 		return []Chirp{}, err
@@ -211,25 +217,23 @@ func (db *DB) writeDB(dbStructure DBStructure) error {
 	return nil
 }
 
-func validChirpHandler(r *http.Request) (bool, error) {	
+func validChirpHandler(r *http.Request) (bool, map[string]string ,error) {	
 
 	decoder := json.NewDecoder(r.Body)
 	p := Chirp{}
 	err := decoder.Decode(&p)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	if len(p.Body) > 140 {
-		return false, fmt.Errorf("chirp is too long")
+		return false, nil,eeer4 fmt.Errorf("chirp is too long")
 	}
 
 	cleaned_body := removeProfanity(p.Body)
-
-	//change this to body form cleaned_body to satisfy the new requirements
 	response := map[string]string {"body": cleaned_body}
 
-	return true, nil
+	return true, response, nil
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
