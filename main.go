@@ -14,6 +14,13 @@ func main() {
 
 	const port = "8080"
 
+	//initialize a new db
+	db err := NewDB(database.json)
+	if db, err := NewDB("database.json")
+	if err ! {
+		log.Fataf("failed to initialize data base ")
+	}
+
 	//Create an empty serve mux
 	mux := http.NewServeMux()
 	corsMux := middlewareCors(mux)
@@ -103,7 +110,7 @@ func NewDB(path string) (*DB, error) {
 func (db *DB) CreateChirp(body string) (Chirp, error) {
 
 	db.mux.Lock()
-	defer db.mux.Unlcok()
+	defer db.mux.Unlock()
 	
 	data, err := os.ReadFile(db.path)
 	if err != nil {
