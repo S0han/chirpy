@@ -87,11 +87,7 @@ type DBStructure struct {
 
 func NewDB(path string) (*DB, error) {
 
-	if ensureDB() != nil {
-		return nil, nil
-	}
-	
-	_, err := ensureDB(path)
+	err := ensureDB(path)
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +101,9 @@ func NewDB(path string) (*DB, error) {
 }
 
 func (db *DB) CreateChirp(body string) (Chirp, error) {
+
+	db.mux.Lock()
+	defer db.mux.Unlcok()
 	
 	data, err := os.ReadFile(db.path)
 	if err != nil {
@@ -227,7 +226,7 @@ func validChirpHandler(r *http.Request) (bool, map[string]string ,error) {
 	}
 
 	if len(p.Body) > 140 {
-		return false, nil,eeer4 fmt.Errorf("chirp is too long")
+		return false, nil, fmt.Errorf("chirp is too long")
 	}
 
 	cleaned_body := removeProfanity(p.Body)
