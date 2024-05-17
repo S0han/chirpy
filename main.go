@@ -15,10 +15,9 @@ func main() {
 	const port = "8080"
 
 	//initialize a new db
-	db err := NewDB(database.json)
-	if db, err := NewDB("database.json")
-	if err ! {
-		log.Fataf("failed to initialize data base ")
+	db, err := NewDB("database.json")
+	if err != nil {
+		log.Fatalf("failed to initialize database")
 	}
 
 	//Create an empty serve mux
@@ -50,7 +49,6 @@ func main() {
 }
 
 func chirpHandler(w http.ResponseWriter, r *http.Request) {
-
 	method := r.Method
 	switch method {
 		case http.MethodGet:
@@ -63,12 +61,12 @@ func chirpHandler(w http.ResponseWriter, r *http.Request) {
 		case http.MethodPost:
 			data, err := validChirpHandler(r)
 			if err != nil {
-				respondWithError(w, 400, `{"error": "Something went wrong"}`)
+				respondWithError(w, http.StatusBadRequest, `{"error": "Something went wrong"}`)
 				return
 			}
 			chirp, err := CreateChirp(data.body)
 			if err != nil {
-				respondWithError(w, 400, `{"error": "Something went wrong"}`)
+				respondWithError(w, http.StatusInternalServerError, `{"error": "Something went wrong"}`)
 				return
 			}
 			respondWithJSON(w, http.StatusCreated, chirp)
@@ -93,7 +91,6 @@ type DBStructure struct {
 }
 
 func NewDB(path string) (*DB, error) {
-
 	err := ensureDB(path)
 	if err != nil {
 		return nil, err
@@ -124,9 +121,7 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 	}
 
 	maxVal := 0
-
 	for _, val := range(chirpHolder.Chirps) {
-
 		if val.Id > maxVal {
 			maxVal = val.Id
 		}
@@ -255,9 +250,8 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 }
 
 func respondWithError(w http.ResponseWriter, code int, msg string) {
-	http.Error(w, msg, http.StatusBadRequest)
-	w.WriteHeader(code)
-	return
+	w.Header().Set("Content-Type", "application/json")
+	http.Error(w, msg, code)
 }
 
 func removeProfanity(chirp string) string {
