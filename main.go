@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"strings"
 )
@@ -17,7 +18,7 @@ func main() {
 	//initialize a new db
 	db, err := NewDB("database.json")
 	if err != nil {
-		log.Fatalf("failed to initialize database")
+		log.Fatalf("failed to initialize database: %v", err)
 	}
 
 	//Create an empty serve mux
@@ -40,7 +41,7 @@ func main() {
 		handleState.resetHits(w, r)
 	})
 
-	mux.HandleFunc("/api/chirps", chirpHandler)
+	mux.HandleFunc("/api/chirps", chirpHandler(db))
 
 	mux.Handle("/app/", handleState.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir("app")))))
 
@@ -48,9 +49,9 @@ func main() {
 	log.Fatal(server.ListenAndServe())
 }
 
-func chirpHandler(w http.ResponseWriter, r *http.Request) {
-	method := r.Method
-	switch method {
+func chirpHandler(db *DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
 		case http.MethodGet:
 			allChirps, err := db.GetChirps()
 			if err != nil {
@@ -58,13 +59,15 @@ func chirpHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			respondWithJSON(w, http.StatusOK, allChirps)
+
 		case http.MethodPost:
-			data, err := validChirpHandler(r)
+			_, data, err := validChirpHandler(r)
 			if err != nil {
 				respondWithError(w, http.StatusBadRequest, `{"error": "Something went wrong"}`)
 				return
 			}
-			chirp, err := CreateChirp(data.body)
+
+			chirp, err := db.CreateChirp(data["body"])
 			if err != nil {
 				respondWithError(w, http.StatusInternalServerError, `{"error": "Something went wrong"}`)
 				return
@@ -72,8 +75,8 @@ func chirpHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithJSON(w, http.StatusCreated, chirp)
 		default:
 			respondWithError(w, http.StatusMethodNotAllowed, `{"error": "Method not allowed"}`)
+		}
 	}
-
 }
 
 type Chirp struct {
@@ -91,21 +94,20 @@ type DBStructure struct {
 }
 
 func NewDB(path string) (*DB, error) {
-	err := ensureDB(path)
-	if err != nil {
-		return nil, err
-	}
-
 	db := &DB{
 		path: path,
 		mux: &sync.RWMutex{},
+	}
+
+	err := ensureDB(path)
+	if err != nil {
+		return nil, err
 	}
 
 	return db, nil
 }
 
 func (db *DB) CreateChirp(body string) (Chirp, error) {
-
 	db.mux.Lock()
 	defer db.mux.Unlock()
 	
@@ -121,32 +123,30 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 	}
 
 	maxVal := 0
-	for _, val := range(chirpHolder.Chirps) {
+	for _, val := range chirpHolder.Chirps {
 		if val.Id > maxVal {
 			maxVal = val.Id
 		}
 	}
 
-	maxVal++
-
+	nextID := maxVal + 1
 	newChirp := Chirp {
-		Id: maxVal,
+		Id: nextID,
 		Body: body,
 	}
 
-	chirpHolder.Chirps[maxVal] = newChirp
+	chirpHolder.Chirps[nextID] = newChirp
 
 	newMap, err := json.Marshal(chirpHolder)
 	if err != nil {
 		return Chirp{}, err
 	}
 
-	err = os.WriteFile(db.path, newMap, os.ModePerm)
-	if err != nil {
+	if err = os.WriteFile(db.path, newMap, 0644); err != nil {
 		return Chirp{}, err
 	}
 
-	return newChirp, err
+	return newChirp, nil
 }
 
 func (db *DB) GetChirps() ([]Chirp, error) {
@@ -170,20 +170,23 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 	return chirpSlice, err
 }
 
-func (db *DB) ensureDB() error {
-
-	if _, err := os.Stat(db.path); err != nil {
+func ensureDB(path string) error {
+	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
-			file, createErr := os.Create(db.path)
+			file, createErr := os.Create(path)
 			if createErr != nil {
 				return createErr
 			}
 			file.Close()
+
+			initialData := []byte(`{"chirps":{}}`)
+			if err := os.WriteFile(path, initialData, 0644); err != nil {
+				return err
+			}
 		} else {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -218,20 +221,23 @@ func (db *DB) writeDB(dbStructure DBStructure) error {
 	return nil
 }
 
-func validChirpHandler(r *http.Request) (bool, map[string]string ,error) {	
-
-	decoder := json.NewDecoder(r.Body)
-	p := Chirp{}
-	err := decoder.Decode(&p)
+func validChirpHandler(r *http.Request) (bool, map[string]string, error) {	
+	var body map[string]string
+	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return false, nil, err
 	}
 
-	if len(p.Body) > 140 {
+	chirpBody := body["body"]
+	if chirpBody == "" {
+		return false, nil, fmt.Errorf("chirp body is required")
+	}
+
+	if len(chirpBody) > 140 {
 		return false, nil, fmt.Errorf("chirp is too long")
 	}
 
-	cleaned_body := removeProfanity(p.Body)
+	cleaned_body := removeProfanity(chirpBody)
 	response := map[string]string {"body": cleaned_body}
 
 	return true, response, nil
@@ -300,8 +306,7 @@ func (cfg *apiCfg) processedRequests(w http.ResponseWriter, r *http.Request) {
 		<p>Chirpy has been visited %d times!</p>
 	</body>
 	
-	</html>
-	`, currentHits)
+	</html>`, currentHits)
 	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(hits))
