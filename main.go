@@ -9,6 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"strings"
+	"sort"
 )
 
 func main() {
@@ -166,6 +167,10 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 	for _, val := range(chirpHolder.Chirps) {
 		chirpSlice = append(chirpSlice, val)
 	}
+
+	sort.Slice(chirpSlice, func(i, j int) bool {
+		return chirpSlice[i].Id < chirpSlice[j].Id
+	})
 
 	return chirpSlice, err
 }
