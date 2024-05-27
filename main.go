@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"strings"
 	"sort"
+	"strconv"
 )
 
 func main() {
@@ -44,10 +45,45 @@ func main() {
 
 	mux.HandleFunc("/api/chirps", chirpHandler(db))
 
+	mux.HandleFunc("/api/chirps/", getChirpById)
+
 	mux.Handle("/app/", handleState.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir("app")))))
 
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(server.ListenAndServe())
+}
+
+func getChirpById(w http.ResponseWriter, r *http.Request) {
+	urlParts := strings.Split(r.URL.Path, "/")
+	chirpIDStr := urlParts[len(urlParts)-1]
+
+	chirpID, err := strconv.Atoi(chirpIDStr)
+	if err != nil {
+		http.Error(w, "Invalid chirp ID", http.StatusBadRequest)
+		return
+	}
+
+	chirp, exists := dummyDB[chirpID]
+	if !exists {
+		http.Error(w, "chirp not found", http.StatusNotFound)
+		return
+	}
+
+	response := map[string]interface{}{
+		"id": chirpID,
+		"body": chirp,
+	}
+
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(responseJSON)
+
 }
 
 func chirpHandler(db *DB) http.HandlerFunc {
@@ -172,7 +208,7 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 		return chirpSlice[i].Id < chirpSlice[j].Id
 	})
 
-	return chirpSlice, err
+	return chirpSlice, nil
 }
 
 func ensureDB(path string) error {
@@ -182,7 +218,7 @@ func ensureDB(path string) error {
 			if createErr != nil {
 				return createErr
 			}
-			file.Close()
+			defer file.Close()
 
 			initialData := []byte(`{"chirps":{}}`)
 			if err := os.WriteFile(path, initialData, 0644); err != nil {
