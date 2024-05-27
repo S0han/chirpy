@@ -47,10 +47,23 @@ func main() {
 
 	mux.HandleFunc("/api/chirps/", getChirpById(db))
 
+	mux.HandleFunc("/api/users", createUser(db))
+
 	mux.Handle("/app/", handleState.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir("app")))))
 
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(server.ListenAndServe())
+}
+
+type User struct {
+	Id int  `json:"id"`
+	Email string `json:"email"`
+}
+
+func CreateUser(db *DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		//
+	}
 }
 
 func getChirpById(db *DB) http.HandlerFunc {
