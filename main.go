@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sort"
 	"strconv"
+	"flag"
 )
 
 func main() {
@@ -29,6 +30,17 @@ func main() {
 	server := &http.Server {
 		Addr: ":" + port,
 		Handler: corsMux,
+	}
+
+	dbg := flag.Bool("debug", false, "Enable debug mode")
+	flag.Parse()
+
+	if *dbg {
+		log.Println("Debug mode enabled - resetting database...")
+		err := os.Remove("database.json")
+		if err != nil && !os.IsNotExist(err) {
+			log.Fatalf("failed to reset database: %v", err)
+		}
 	}
 
 	mux.HandleFunc("/api/healthz", healthzHandler)
@@ -304,7 +316,7 @@ func ensureDB(path string) error {
 			}
 			defer file.Close()
 
-			initialData := []byte(`{"chirps":{}}`)
+			initialData := []byte(`{"chirps":{}, "users":{}}`)
 			if err := os.WriteFile(path, initialData, 0644); err != nil {
 				return err
 			}
