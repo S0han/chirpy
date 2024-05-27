@@ -45,7 +45,7 @@ func main() {
 
 	mux.HandleFunc("/api/chirps", chirpHandler(db))
 
-	mux.HandleFunc("/api/chirps/", getChirpById)
+	mux.HandleFunc("/api/chirps/", getChirpById(db))
 
 	mux.Handle("/app/", handleState.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir("app")))))
 
@@ -53,37 +53,43 @@ func main() {
 	log.Fatal(server.ListenAndServe())
 }
 
-func getChirpById(w http.ResponseWriter, r *http.Request) {
-	urlParts := strings.Split(r.URL.Path, "/")
-	chirpIDStr := urlParts[len(urlParts)-1]
+func getChirpById(db *DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		urlParts := strings.Split(r.URL.Path, "/")
+		chirpIDStr := urlParts[len(urlParts)-1]
 
-	chirpID, err := strconv.Atoi(chirpIDStr)
-	if err != nil {
-		http.Error(w, "Invalid chirp ID", http.StatusBadRequest)
-		return
+		chirpID, err := strconv.Atoi(chirpIDStr)
+		if err != nil {
+			http.Error(w, "Invalid chirp ID", http.StatusBadRequest)
+			return
+		}
+
+		chirp, exists, err := db.GetChirpByID(chirpID)
+		if err != nil {
+			http.Error(w, "chirp not found", http.StatusNotFound)
+			return
+		}
+
+		if !exists {
+			http.Error(w, "Chirp not found", http.StatusNotFound)
+			return
+		}
+
+		response := map[string]interface{}{
+			"id": chirp.Id,
+			"body": chirp.Body,
+		}
+
+		responseJSON, err := json.Marshal(response)
+		if err != nil {
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(responseJSON)
 	}
-
-	chirp, exists := dummyDB[chirpID]
-	if !exists {
-		http.Error(w, "chirp not found", http.StatusNotFound)
-		return
-	}
-
-	response := map[string]interface{}{
-		"id": chirpID,
-		"body": chirp,
-	}
-
-	responseJSON, err := json.Marshal(response)
-	if err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(responseJSON)
-
 }
 
 func chirpHandler(db *DB) http.HandlerFunc {
@@ -209,6 +215,24 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 	})
 
 	return chirpSlice, nil
+}
+
+func (db *DB) GetChirpByID(id int) (Chirp, bool, error) {
+	db.mux.RLock()
+	defer db.mux.RUnlock()
+
+	data, err := os.ReadFile(db.path)
+	if err != nil {
+		return Chirp{}, false, err
+	}
+
+	var chirpHolder = new(DBStructure)
+	if err := json.Unmarshal(data, &chirpHolder); err != nil {
+		return Chirp{}, false, err
+	}
+
+	chirp, exists := chirpHolder.Chirps[id]
+	return chirp, exists, nil
 }
 
 func ensureDB(path string) error {
