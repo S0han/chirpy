@@ -47,7 +47,7 @@ func main() {
 
 	mux.HandleFunc("/api/chirps/", getChirpById(db))
 
-	mux.HandleFunc("/api/users", createUser(db))
+	mux.HandleFunc("/api/users", CreateUser(db))
 
 	mux.Handle("/app/", handleState.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir("app")))))
 
@@ -62,7 +62,53 @@ type User struct {
 
 func CreateUser(db *DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//
+		var newUser User
+		if err := json.NewDecoder(r.Body).Decode(&newUser); err != nil {
+			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			return
+		}
+
+		db.mux.Lock()
+		defer db.mux.Unlock()
+
+		data, err := os.ReadFile(db.path)
+		if err != nil {
+			http.Error(w, "Failed to read database", http.StatusInternalServerError)
+			return
+		}
+
+		var dbData DBStructure
+		if err := json.Unmarshal(data, &dbData); err != nil {
+			http.Error(w, "Failed to parse database", http.StatusInternalServerError)
+			return
+		}
+
+		maxVal := 0
+		for _, user := range dbData.Users {
+			if user.Id > maxVal {
+				maxVal = user.Id
+			}
+		}
+
+		nextID := maxVal + 1
+		newUser.Id = nextID
+
+		dbData.Users[nextID] = newUser
+
+		newData, err := json.Marshal(dbData)
+		if err != nil {
+			http.Error(w, "Failed to encode database", http.StatusInternalServerError)
+			return
+		}
+
+		if err = os.WriteFile(db.path, newData, 0644); err != nil {
+			http.Error(w, "failed to write database", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(newUser)
 	}
 }
 
@@ -147,6 +193,7 @@ type DB struct {
 
 type DBStructure struct {
 	Chirps map[int]Chirp `json:"chirps"`
+	Users map[int]User `json:"users"`
 }
 
 func NewDB(path string) (*DB, error) {
