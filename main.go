@@ -78,7 +78,7 @@ func userLogin(db *DB) http.HandlerFunc {
 		}
 		 
 		if err := json.NewDecoder(r.Body).Decode(&loginDetails); err != nil {
-			http.Error(w, "Invalid request payload". http.StatusBadRequest)
+			http.Error(w, "Invalid request payload", http.StatusBadRequest)
 			return
 		}
 
@@ -98,14 +98,14 @@ func userLogin(db *DB) http.HandlerFunc {
 		}
 
 		var foundUser User
-		for _, user := range dbData.USers {
+		for _, user := range dbData.Users {
 			if user.Email == loginDetails.Email {
 				foundUser = user
 				break
 			}
 		}
 
-		if foundUser.Email = "" {
+		if foundUser.Email == "" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -116,7 +116,7 @@ func userLogin(db *DB) http.HandlerFunc {
 			return
 		}
 
-		repsonseUser := struct {
+		responseUser := struct {
 			Id int `json:"id"`
 			Email string `json:"email"`
 		}{
