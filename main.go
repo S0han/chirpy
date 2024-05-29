@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"flag"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
@@ -61,15 +62,77 @@ func main() {
 
 	mux.HandleFunc("/api/users", CreateUser(db))
 
+	mux.HandleFunc("/api/login", userLogin(db))
+
 	mux.Handle("/app/", handleState.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir("app")))))
 
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(server.ListenAndServe())
 }
 
+func userLogin(db *DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var loginDetails struct {
+			Email string `json:"email"`
+			Password string `json:"password"`
+		}
+		 
+		if err := json.NewDecoder(r.Body).Decode(&loginDetails); err != nil {
+			http.Error(w, "Invalid request payload". http.StatusBadRequest)
+			return
+		}
+
+		db.mux.Lock()
+		defer db.mux.Unlock()
+
+		data, err := os.ReadFile(db.path)
+		if err != nil {
+			http.Error(w, "Failed to read database", http.StatusInternalServerError)
+			return
+		}
+
+		var dbData DBStructure
+		if err := json.Unmarshal(data, &dbData); err != nil {
+			http.Error(w, "Failed to parse database", http.StatusInternalServerError)
+			return
+		}
+
+		var foundUser User
+		for _, user := range dbData.USers {
+			if user.Email == loginDetails.Email {
+				foundUser = user
+				break
+			}
+		}
+
+		if foundUser.Email = "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		err = bcrypt.CompareHashAndPassword([]byte(foundUser.Password), []byte(loginDetails.Password))
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		repsonseUser := struct {
+			Id int `json:"id"`
+			Email string `json:"email"`
+		}{
+			Id: foundUser.Id,
+			Email: foundUser.Email,
+		}
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(responseUser)
+	}
+}
+
 type User struct {
 	Id int  `json:"id"`
 	Email string `json:"email"`
+	Password string `json:"password"`
 }
 
 func CreateUser(db *DB) http.HandlerFunc {
@@ -79,6 +142,13 @@ func CreateUser(db *DB) http.HandlerFunc {
 			http.Error(w, "Invalid request payload", http.StatusBadRequest)
 			return
 		}
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
+		if err != nil {
+			http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+			return
+		}
+		newUser.Password = string(hashedPassword)
 
 		db.mux.Lock()
 		defer db.mux.Unlock()
@@ -105,7 +175,7 @@ func CreateUser(db *DB) http.HandlerFunc {
 		nextID := maxVal + 1
 		newUser.Id = nextID
 
-		dbData.Users[nextID] = newUser
+		dbData.Users[nextID] = newUser		
 
 		newData, err := json.Marshal(dbData)
 		if err != nil {
@@ -118,9 +188,17 @@ func CreateUser(db *DB) http.HandlerFunc {
 			return
 		}
 
+		responseUser := struct {
+			Id int `json:"id"`
+			Email string `json:"email"`
+		}{
+			Id: newUser.Id,
+			Email: newUser.Email,
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(newUser)
+		json.NewEncoder(w).Encode(responseUser)
 	}
 }
 
