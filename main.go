@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"flag"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/joho/godotenv"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func main() {
@@ -24,6 +26,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to initialize database: %v", err)
 	}
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fata("Error loading .env file")
+	}
+	jwtSecret := os.Getenv("JWT_SECRET")
 
 	//Create an empty serve mux
 	mux := http.NewServeMux()
@@ -133,6 +141,124 @@ type User struct {
 	Id int  `json:"id"`
 	Email string `json:"email"`
 	Password string `json:"password"`
+}
+
+type LoginRequest struct {
+	Email string `json:"email"`
+	Password string `json:"password"`
+	ExpiresInSeconds int `json:"expires_in_seconds"`
+}
+
+func (api *API) handleLogin(w http.ResponseWriter, r *http.Request) {
+	var req LoginRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	//Authenicate the user (pseudocode)
+	user err := api.authenticateUser(req.Email, req.Password)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var expireationTime  time.time
+	if req.ExpiresInSeconds > 0 {
+		if req.EXpiresInSeconds > 86400 {
+			req.ExpiresInSeconds = 86400
+		}
+		expirationTime = time.Now().Add(24 * time.Hour)
+ 	} else {
+		expirationTime = time.Now().Add(24 * time.Hour)
+	}
+	
+	claims := &jwt.RegisterClaims {
+		Issuer: "chirpy",
+		IssusedAt: jwt.NewNumericDate(time.Now().UTC()),
+		ExpiresAt: jwt.NewNumericDate(expirationTime),
+		Subject: fmt.Sprintf("%d", user.ID),
+	}
+
+	// Create the token
+	token := jwt.NewWithClaims(jwt.SignMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(api.jwtSecret))
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{} {
+		"id": user.ID,
+		"email": user.Email,
+		"token": tokenString,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func (api *API) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHEader, "Bearer ") {
+		http.error(w, "Authorization header missing or incorrectly formatted", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString := strings.TimePrefix(authHeader, "Bearer ")
+
+	claims := &jwt.RegisteredClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(api.jwtSecret), nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	userId err := strconv.Atoi(claims.Subject)
+	if err != nil {
+		http.Error(w. "Invalid user ID in token", http.StatusUnauthorized)
+		return
+	}
+
+	var req map[string]stringerr = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid reqeust body", http.StatusBadRequest)
+		return
+	}
+
+	email, emailOk := req["email"]
+	password, passwordOk := req["password"]
+
+	updatedFields := make(map[string]interface{})
+	if emailOk {
+		updatedFields["email"] = email
+	}
+	if passwordOk {
+		updatedFields["password"] = password
+	}
+
+	err = api.db.UpdateUser(userID, updatedFields)
+	if err != nil {
+		http.Error(w, "Failed to update user", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{} {
+		"id": userID,
+		"email": email,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func CreateToken(db *DB) http.HandlerFunc {
+	return func (w http.ResponseWriter, r *http.Request) {
+
+	}
 }
 
 func CreateUser(db *DB) http.HandlerFunc {
