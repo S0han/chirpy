@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-
-	"github.com/bootdotdev/go-api-gate/courses/learn-web-servers/jwt/internal/auth"
-	"github.com/bootdotdev/go-api-gate/courses/learn-web-servers/jwt/internal/database"
+	"github.com/S0han/chirpy/internal/database"
+	"github.com/S0han/chirpy/internal/auth"
 )
 
 type User struct {

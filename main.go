@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/S0han/chirpy/database"
+	"github.com/S0han/chirpy/internal/database"
 	"github.com/joho/godotenv"
 )
 
@@ -49,15 +49,21 @@ func main() {
 
 	mux := http.NewServeMux()
 	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
-	mux.Handle("/app/", fsHandler)
+	mux.Handle("/app/*", fsHandler)
 
-	mux.HandleFunc("/api/healthz", handlerReadiness)
-	mux.HandleFunc("/api/reset", apiCfg.handlerReset)
-	mux.HandleFunc("/api/login", apiCfg.handlerLogin)
-	mux.HandleFunc("/api/users", apiCfg.handlerUsers)
-	mux.HandleFunc("/api/chirps", apiCfg.handlerChirps)
-	mux.HandleFunc("/api/chirps/", apiCfg.handlerChirp)
-	mux.HandleFunc("/admin/metrics", apiCfg.handlerMetrics)
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+	mux.HandleFunc("GET /api/reset", apiCfg.handlerReset)
+
+	mux.HandleFunc("POST /api/login", apiCfg.handlerLogin)
+
+	mux.HandleFunc("POST /api/users", apiCfg.handlerUsersCreate)
+	mux.HandleFunc("PUT /api/users", apiCfg.handlerUsersUpdate)
+
+	mux.HandleFunc("POST /api/chirps", apiCfg.handlerChirpsCreate)
+	mux.HandleFunc("GET /api/chirps", apiCfg.handlerChirpsRetrieve)
+	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.handlerChirpsGet)
+
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
@@ -66,92 +72,4 @@ func main() {
 
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
 	log.Fatal(srv.ListenAndServe())
-}
-
-// Example handler functions (you need to implement them based on your requirements)
-func handlerReadiness(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
-}
-
-func (api *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	err := api.DB.ResetDB()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Database reset"))
-}
-
-func (api *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Implement your login logic here
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Logged in"))
-}
-
-func (api *apiConfig) handlerUsers(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		// Handle user creation
-		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte("User created"))
-	case http.MethodPut:
-		// Handle user update
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("User updated"))
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (api *apiConfig) handlerChirps(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		// Handle chirp creation
-		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte("Chirp created"))
-	case http.MethodGet:
-		// Handle chirp retrieval
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Chirps retrieved"))
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (api *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Handle retrieving a specific chirp by ID
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Chirp retrieved"))
-}
-
-func (api *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Metrics"))
-}
-
-// Example middleware function for metrics (implement as needed)
-func (api *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		api.fileserverHits++
-		next.ServeHTTP(w, r)
-	})
 }

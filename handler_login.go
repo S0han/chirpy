@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
-	"github.com/bootdotdev/go-api-gate/courses/learn-web-servers/jwt/internal/auth"
+	"github.com/S0han/chirpy/internal/auth"
 )
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {

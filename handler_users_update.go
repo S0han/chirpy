@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-
-	"github.com/bootdotdev/go-api-gate/courses/learn-web-servers/jwt/internal/auth"
+	"github.com/S0han/chirpy/internal/auth"
 )
 
 func (cfg *apiConfig) handlerUsersUpdate(w http.ResponseWriter, r *http.Request) {
