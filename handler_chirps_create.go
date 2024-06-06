@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type Chirp struct {
+ttype Chirp struct {
 	ID   int    `json:"id"`
 	Body string `json:"body"`
 }
