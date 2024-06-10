@@ -7,7 +7,7 @@ import (
 	"github.com/S0han/chirpy/internal/auth"
 )
 
-ffunc (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Password string `json:"password"`
 		Email    string `json:"email"`
