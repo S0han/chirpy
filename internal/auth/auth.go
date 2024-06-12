@@ -13,6 +13,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type TokenType string
+
+const (
+	// TokenTypeAccess -
+	TokenTypeAccess TokenType = "chirpy-access"
+)
+
 // ErrNoAuthHeaderIncluded -
 var ErrNoAuthHeaderIncluded = errors.New("no auth header included in request")
 
@@ -39,7 +46,7 @@ func MakeJWT(
 	signingKey := []byte(tokenSecret)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
-		Issuer:    "chirpy",
+		Issuer:    string(TokenTypeAccess),
 		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(expiresIn)),
 		Subject:   fmt.Sprintf("%d", userID),
@@ -68,7 +75,7 @@ func ValidateJWT(tokenString, tokenSecret string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if issuer != string("chirpy") {
+	if issuer != string(TokenTypeAccess) {
 		return "", errors.New("invalid issuer")
 	}
 
