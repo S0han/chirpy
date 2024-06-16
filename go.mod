@@ -1,4 +1,4 @@
-module github.com/bootdotdev/go-api-gate/courses/learn-web-servers/webhooks
+module github.com/S0han/chirpy
 
 go 1.22.1
 

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net/http"
 	
-	"github.com/S0han/chirpy/webhooks/internal/database"
-	"github.com/S0han/chirpy/webhooks/internal/auth"
+	"github.com/S0han/chirpy/webhooks/database"
+	"github.com/S0han/chirpy/webhooks/auth"
 )
 
 type User struct {

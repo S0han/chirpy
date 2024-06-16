@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/S0han/chirpy/webhooks/internal/database"
+	"github.com/S0han/chirpy/webhooks/database"
 )
 
 func (cfg *apiConfig) handlerWebhook(w http.ResponseWriter, r *http.Request) {

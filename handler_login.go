@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
-	"github.com/S0han/chirpy/webhooks/internal/auth"
+	"github.com/S0han/chirpy/webhooks/auth"
 )
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
