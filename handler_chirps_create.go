@@ -7,7 +7,7 @@ import (
 	"strings"
 	"strconv"
 
-	"github.com/S0han/chirpy/internal/auth"
+	"github.com/S0han/chirpy/webhooks/internal/auth"
 )
 
 type Chirp struct {

@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"github.com/S0han/chirpy/internal/database"
-	"github.com/S0han/chirpy/internal/auth"
+	
+	"github.com/S0han/chirpy/webhooks/internal/database"
+	"github.com/S0han/chirpy/webhooks/internal/auth"
 )
 
 type User struct {

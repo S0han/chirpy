@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/S0han/chirpy/internal/auth"
+	"github.com/S0han/chirpy/webhooks/internal/auth"
 )
 
 func (cfg *apiConfig) handlerChirpsDelete(w http.ResponseWriter, r *http.Request) {
