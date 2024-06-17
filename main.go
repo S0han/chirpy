@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/S0han/chirpy/webhooks/internal/database"
+	"github.com/S0han/chirpy/webhooks/database"
 	"github.com/joho/godotenv"
 )
 
